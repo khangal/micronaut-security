@@ -16,8 +16,11 @@
 package io.micronaut.security.token.jwt.validator;
 
 import com.nimbusds.jwt.JWTClaimsSet;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.util.StringUtils;
+import io.micronaut.http.HttpRequest;
 import io.micronaut.security.token.jwt.generator.claims.JwtClaims;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,8 +54,14 @@ public class SubjectNotNullJwtClaimsValidator implements GenericJwtClaimsValidat
         return hasSubject;
     }
 
+    @Deprecated
     @Override
     public boolean validate(JwtClaims claims) {
+        return validate(claims, null);
+    }
+
+    @Override
+    public boolean validate(@NonNull JwtClaims claims, @Nullable HttpRequest<?> request) {
         return validate(JWTClaimsSetUtils.jwtClaimsSetFromClaims(claims));
     }
 }

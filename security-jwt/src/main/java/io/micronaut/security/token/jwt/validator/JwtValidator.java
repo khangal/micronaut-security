@@ -17,6 +17,9 @@ package io.micronaut.security.token.jwt.validator;
 
 import com.nimbusds.jose.*;
 import com.nimbusds.jwt.*;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
+import io.micronaut.http.HttpRequest;
 import io.micronaut.security.token.jwt.encryption.EncryptionConfiguration;
 import io.micronaut.security.token.jwt.generator.claims.JwtClaims;
 import io.micronaut.security.token.jwt.generator.claims.JwtClaimsSetAdapter;
@@ -25,7 +28,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.text.ParseException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * A builder style class for validating JWT tokens against any number of provided
@@ -52,14 +60,28 @@ public final class JwtValidator {
     /**
      * Validates the supplied token with any configurations and claim validators present.
      *
+     * @deprecated Use {@link JwtValidator#validate(String, HttpRequest)} instead.
      * @param token The JWT string
      * @return An optional JWT token if validation succeeds
      */
+    @Deprecated
     public Optional<JWT> validate(String token) {
+        return validate(token, null);
+
+    }
+
+    /**
+     * Validates the supplied token with any configurations and claim validators present.
+     *
+     * @param token The JWT string
+     * @param request HTTP Request
+     * @return An optional JWT token if validation succeeds
+     */
+    public Optional<JWT> validate(String token, @Nullable HttpRequest<?> request) {
         try {
             if (hasAtLeastTwoDots(token)) {
                 JWT jwt = JWTParser.parse(token);
-                return validate(jwt);
+                return validate(jwt, request);
             } else {
                 if (LOG.isTraceEnabled()) {
                     LOG.trace("token {} does not contain two dots", token);
@@ -85,11 +107,23 @@ public final class JwtValidator {
 
     /**
      * Validates the supplied token with any configurations and claim validators present.
-     *
+     * @deprecated Use {@link JwtValidator#validate(JWT, HttpRequest)} instead
      * @param token The JWT token
      * @return An optional JWT token if validation succeeds
      */
+    @Deprecated
     public Optional<JWT> validate(JWT token) {
+        return validate(token, null);
+    }
+
+    /**
+     * Validates the supplied token with any configurations and claim validators present.
+     *
+     * @param token The JWT token
+     * @param request The HTTP Request which contained the JWT token
+     * @return An optional JWT token if validation succeeds
+     */
+    public Optional<JWT> validate(@NonNull JWT token, @Nullable HttpRequest<?> request) {
         Optional<JWT> validationResult;
         if (token instanceof PlainJWT) {
             validationResult = validate((PlainJWT) token);
@@ -106,7 +140,7 @@ public final class JwtValidator {
             return validationResult.filter(jwt -> {
                 try {
                     JwtClaims claims = new JwtClaimsSetAdapter(jwt.getJWTClaimsSet());
-                    return claimsValidators.stream().allMatch(validator -> validator.validate(claims));
+                    return claimsValidators.stream().allMatch(validator -> validator.validate(claims, request));
                 } catch (ParseException e) {
                     if (LOG.isErrorEnabled()) {
                         LOG.error("Failed to retrieve the claims set", e);
